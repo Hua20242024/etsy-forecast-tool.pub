@@ -73,7 +73,7 @@ if df is not None:
         # Forecasting
         model = Prophet(weekly_seasonality=True, daily_seasonality=False)
         model.fit(product_df.rename(columns={'date':'ds', 'units_sold':'y'}))
-        future = model.make_future_dataframe(periods=60)  # 60-day forecast
+        future = model.make_future_dataframe(periods=60)
         forecast = model.predict(future)
         
         # --- Inventory Control Panel ---
@@ -85,8 +85,7 @@ if df is not None:
                 "Current Inventory (days supply)", 
                 min_value=1, 
                 max_value=365, 
-                value=30,
-                help="How many days of inventory you currently have"
+                value=30
             )
         
         with col2:
@@ -94,8 +93,7 @@ if df is not None:
                 "Safety Stock (units)", 
                 min_value=0, 
                 max_value=100, 
-                value=10,
-                help="Extra buffer inventory"
+                value=10
             )
         
         with col3:
@@ -103,14 +101,13 @@ if df is not None:
                 "Lead Time (days)", 
                 min_value=1, 
                 max_value=30, 
-                value=7,
-                help="Days needed to receive new stock"
+                value=7
             )
         
         # Calculate inventory status
         inventory = calculate_inventory(
             forecast, 
-            product_df['units_sold'].iloc[-1],  # Fallback if days_on_hand not used
+            product_df['units_sold'].iloc[-1],
             days_on_hand,
             safety_stock,
             lead_time
@@ -119,40 +116,40 @@ if df is not None:
         # --- Display Results ---
         st.subheader("📊 Inventory Status")
         
-        # Color-coded alert
         if inventory['days_remaining'] <= lead_time:
-            alert = st.error
-            icon = "🚨"
-            message = f"**URGENT REORDER NEEDED** (Stockout: {inventory['stockout_date']})"
+            st.error(f"""
+            🚨 **URGENT REORDER NEEDED**
+            - Projected stockout: {inventory['stockout_date']}
+            - Suggested order: {inventory['order_qty']} units
+            - Order by: {inventory['reorder_date']}
+            """)
         else:
-            alert = st.success
-            icon = "✅"
-            message = f"**Inventory Healthy** (Stockout: {inventory['stockout_date']})"
+            st.success(f"""
+            ✅ **Inventory Healthy**
+            - Projected stockout: {inventory['stockout_date']}
+            - Suggested order date: {inventory['reorder_date']}
+            - Suggested order qty: {inventory['order_qty']} units
+            """)
         
-        alert(f"""
-        {icon} **Status:** {message}  
-        **Avg Daily Sales:** {inventory['avg_daily']} units/day  
-        **Current Stock:** ~{inventory['current_units']} units ({days_on_hand} days)  
-        **Safety Stock:** {safety_stock} units  
-        **Reorder Point:** {inventory['reorder_point']} units  
-        """)
+        # Create compact plot
+        fig, ax = plt.subplots(figsize=(10, 3))
+        ax.plot(product_df['date'], product_df['units_sold'], 'b-', label='Actual Sales')
+        ax.plot(forecast['ds'], forecast['yhat'], 'r--', label='Forecast')
+        ax.fill_between(forecast['ds'], forecast['yhat_lower'], forecast['yhat_upper'], color='red', alpha=0.1)
+        ax.axvline(x=datetime.now(), color='gray', linestyle=':', label='Today')
+        ax.set_title(f"{selected_product} Sales Forecast")
+        ax.legend()
+        ax.grid(True, linestyle=':', alpha=0.3)
+        st.pyplot(fig)
         
-        # Recommendation cards
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric(
-                "Suggested Order Date", 
-                inventory['reorder_date'],
-                help="When to place your next order"
-            )
-        
-        with col2:
-            st.metric(
-                "Suggested Order Qty", 
-                f"{inventory['order_qty']} units",
-                help="Based on 1.5x lead time demand"
-            )
-        
-        # Compact plot
-        st.subheader("📈 Sales Forecast")
-        fig, ax =
+else:
+    st.info("ℹ️ Please upload a CSV file with columns: date, units_sold, product")
+    st.download_button(
+        label="📥 Download Sample CSV",
+        data=pd.DataFrame({
+            'date': pd.date_range(end=datetime.today(), periods=10).strftime('%Y-%m-%d'),
+            'units_sold': np.random.randint(5, 20, 10),
+            'product': "Sample Product"
+        }).to_csv(index=False),
+        file_name="sample_inventory_data.csv"
+    )
