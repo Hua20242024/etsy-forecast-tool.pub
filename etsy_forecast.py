@@ -16,7 +16,7 @@ def load_data(uploaded_file):
         df = pd.read_csv(uploaded_file)
         # Flexible column detection
         date_col = next((col for col in df.columns if 'date' in col.lower()), None)
-        sales_col = next((col for col in df.columns if any(x in col.lower() for x in ['units', 'sales', 'qty']), None)
+        sales_col = next((col for col in df.columns if any(x in col.lower() for x in ['units', 'sales', 'qty'])), None)
         product_col = next((col for col in df.columns if 'product' in col.lower()), None)
         
         if not all([date_col, sales_col, product_col]):
@@ -155,29 +155,4 @@ if df is not None:
         
         # Compact plot
         st.subheader("📈 Sales Forecast")
-        fig, ax = plt.subplots(figsize=(10, 3))
-        ax.plot(product_df['date'], product_df['units_sold'], 'b-', label='Actual Sales')
-        ax.plot(forecast['ds'], forecast['yhat'], 'r--', label='Forecast')
-        ax.fill_between(forecast['ds'], forecast['yhat_lower'], forecast['yhat_upper'], color='red', alpha=0.1)
-        ax.axvline(x=datetime.now(), color='gray', linestyle=':', label='Today')
-        ax.set_title(f"{selected_product} Inventory Forecast")
-        ax.legend()
-        ax.grid(True, linestyle=':', alpha=0.3)
-        st.pyplot(fig)
-        
-else:
-    st.info("""
-    ℹ️ **How to use:**
-    1. Upload CSV with columns: date, units_sold, product
-    2. Set your current inventory levels
-    3. Get automatic reorder alerts
-    """)
-    st.download_button(
-        label="📥 Download Sample CSV",
-        data=pd.DataFrame({
-            'date': pd.date_range(end=datetime.today(), periods=30).strftime('%Y-%m-%d'),
-            'units_sold': np.random.randint(5, 20, 30),
-            'product': "Sample Product"
-        }).to_csv(index=False),
-        file_name="sample_inventory_data.csv"
-    )
+        fig, ax =
