@@ -15,7 +15,7 @@ def load_data(uploaded_file):
         df = pd.read_csv(uploaded_file)
         # Find relevant columns (case insensitive)
         date_col = next((col for col in df.columns if 'date' in col.lower()), 'date')
-        sales_col = next((col for col in df.columns if any(x in col.lower() for x in ['units', 'sales', 'qty']), 'units_sold')
+        sales_col = next((col for col in df.columns if any(x in col.lower() for x in ['units', 'sales', 'qty'])), 'units_sold')
         product_col = next((col for col in df.columns if 'product' in col.lower()), 'product')
         
         df = df.rename(columns={
