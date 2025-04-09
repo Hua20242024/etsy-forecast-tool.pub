@@ -11,8 +11,8 @@ import pandas as pd
 import numpy as np
 from prophet import Prophet
 from datetime import datetime, timedelta
+import plotly.express as px
 import plotly.graph_objects as go
-import math
 
 # --- Streamlit Style Setup ---
 st.markdown("""
@@ -41,10 +41,6 @@ st.markdown("""
     .stPlotlyChart {
         border: none !important;
         padding: 0 !important;
-        background: transparent !important;
-    }
-    .floating-bubbles {
-        background-color: transparent !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -71,59 +67,28 @@ def load_data(uploaded_file):
         st.error(f"❌ Data Error: {str(e)}")
         st.stop()
 
-# --- Floating Bubbles Visualization ---
-def create_floating_bubbles(df):
-    # Get last month's sales
-    last_month = (datetime.now().replace(day=1) - timedelta(days=1)).strftime('%Y-%m')
-    monthly_sales = df[df['date'].dt.strftime('%Y-%m') == last_month]
+# --- Heatmap Visualization ---
+def create_sales_heatmap(df):
+    # Prepare monthly sales data
+    monthly_sales = df.copy()
+    monthly_sales['month'] = monthly_sales['date'].dt.to_period('M').astype(str)
+    heatmap_data = monthly_sales.groupby(['product', 'month'])['units_sold'].sum().unstack().fillna(0)
     
-    if monthly_sales.empty:
-        st.warning(f"No sales data for {last_month}")
-        return None
+    # Create heatmap
+    fig = px.imshow(
+        heatmap_data,
+        labels=dict(x="Month", y="Product", color="Units Sold"),
+        color_continuous_scale='Viridis',
+        aspect="auto"
+    )
     
-    product_sales = monthly_sales.groupby('product')['units_sold'].sum().reset_index()
-    n = len(product_sales)
-    
-    # Create initial positions in a circle
-    radius = 40
-    center_x, center_y = 50, 50
-    angles = np.linspace(0, 2*np.pi, n, endpoint=False)
-    x_pos = center_x + radius * np.cos(angles)
-    y_pos = center_y + radius * np.sin(angles)
-    
-    # Create figure
-    fig = go.Figure()
-    
-    # Add bubbles with colored borders
-    colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8']
-    for i in range(n):
-        fig.add_trace(go.Scatter(
-            x=[x_pos[i]],
-            y=[y_pos[i]],
-            mode='markers+text',
-            marker=dict(
-                size=product_sales['units_sold'].iloc[i]/product_sales['units_sold'].max()*50 + 30,
-                color='rgba(0,0,0,0)',  # Transparent center
-                line=dict(width=3, color=colors[i % len(colors)]),
-                opacity=0.8
-            ),
-            text=product_sales['product'].iloc[i],
-            textposition='middle center',
-            hoverinfo='text',
-            hovertext=f"{product_sales['product'].iloc[i]}<br>{last_month} Sales: {product_sales['units_sold'].iloc[i]} units",
-            name=''
-        ))
-    
-    # Layout without axes
+    # Customize layout
     fig.update_layout(
-        title=f"Product Sales - {last_month}",
-        showlegend=False,
-        xaxis=dict(visible=False, range=[0, 100]),
-        yaxis=dict(visible=False, range=[0, 100]),
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)',
-        height=500,
-        margin=dict(l=0, r=0, t=60, b=0)
+        title='Monthly Sales Heatmap',
+        xaxis_title='Month',
+        yaxis_title='Product',
+        height=600,
+        margin=dict(l=0, r=0, t=40, b=0)
     )
     
     return fig
@@ -230,12 +195,10 @@ uploaded_file = st.file_uploader("📤 Upload Sales CSV", type=["csv"])
 if uploaded_file:
     df = load_data(uploaded_file)
     
-    # --- Floating Bubbles Section ---
-    st.subheader("🌍 Product Sales Visualization")
-    with st.container():
-        bubble_fig = create_floating_bubbles(df)
-        if bubble_fig:
-            st.plotly_chart(bubble_fig, use_container_width=True, config={'displayModeBar': False})
+    # --- Heatmap Section ---
+    st.subheader("🔥 Monthly Sales Heatmap")
+    heatmap_fig = create_sales_heatmap(df)
+    st.plotly_chart(heatmap_fig, use_container_width=True)
     
     # --- Product Selection ---
     product = st.selectbox("SELECT PRODUCT FOR DETAILED ANALYSIS", df['product'].unique())
