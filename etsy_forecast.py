@@ -13,7 +13,8 @@ from prophet import Prophet
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
 import plotly.express as px
-from random import uniform
+from random import uniform, random
+from scipy.spatial.distance import cdist
 
 # --- Streamlit Style Setup ---
 st.markdown("""
@@ -132,68 +133,131 @@ def create_forecast_chart(actual_df, forecast_df):
     
     return fig
 
-# --- NEW: Animated Bubble Chart ---
-def create_animated_bubble_chart(df):
-    # Process data for monthly sales by product
-    monthly_sales = df.copy()
+# --- NEW: Physics-based Bubble Chart with History ---
+def create_product_bubbles(df):
+    # Get last 3 months of data for each product
+    cutoff_date = datetime.now().replace(day=1) - timedelta(days=90)
+    monthly_sales = df[df['date'] >= cutoff_date].copy()
     monthly_sales['month'] = monthly_sales['date'].dt.to_period('M').astype(str)
-    monthly_sales = monthly_sales.groupby(['product', 'month'])['units_sold'].sum().reset_index()
     
-    # Add jitter for animation effect (small random movements)
+    # Aggregate and reshape for hover data
+    product_history = monthly_sales.groupby(['product', 'month'])['units_sold'].sum().unstack().reset_index()
+    last_month = monthly_sales['month'].iloc[-1]
+    current_sales = product_history[['product', last_month]].rename(columns={last_month: 'current_units'})
+    
+    # Calculate bubble positions with physics simulation
+    products = current_sales['product'].unique()
+    n = len(products)
+    
+    # Initialize positions randomly
+    pos = np.array([[random() * 800, random() * 400] for _ in range(n)])
+    sizes = current_sales['current_units'].values
+    max_size = max(sizes)
+    radii = (sizes / max_size * 40) + 20
+    
+    # Simple physics simulation to avoid overlaps
+    for _ in range(50):  # Iterations
+        # Calculate distances between all bubbles
+        dist_matrix = cdist(pos, pos)
+        
+        # Adjust positions to avoid overlaps
+        for i in range(n):
+            for j in range(i+1, n):
+                min_dist = radii[i] + radii[j]
+                actual_dist = dist_matrix[i,j]
+                
+                if actual_dist < min_dist:
+                    # Calculate repulsion vector
+                    dx, dy = pos[i] - pos[j]
+                    angle = np.arctan2(dy, dx)
+                    move = (min_dist - actual_dist) * 0.5
+                    
+                    # Move bubbles apart
+                    pos[i] += [move * np.cos(angle), move * np.sin(angle)]
+                    pos[j] -= [move * np.cos(angle), move * np.sin(angle)]
+    
+    # Create hover text with historical data
+    hover_text = []
+    for product in products:
+        history = product_history[product_history['product'] == product].iloc[0]
+        text = f"<b>{product}</b><br>Current: {history[last_month]:.0f} units<br>"
+        for month in product_history.columns[1:-1]:  # Skip product name and last month
+            text += f"{month}: {history[month]:.0f} units<br>" if month in history else ""
+        hover_text.append(text)
+    
+    # Create figure
+    fig = go.Figure()
+    
+    # Add bubbles
+    fig.add_trace(go.Scatter(
+        x=pos[:,0],
+        y=pos[:,1],
+        mode='markers+text',
+        marker=dict(
+            size=radii,
+            sizemode='diameter',
+            color=np.linspace(0, 1, n),
+            colorscale='Viridis',
+            line=dict(width=2, color='DarkSlateGrey')
+        ),
+        text=products,
+        textposition='middle center',
+        hovertext=hover_text,
+        hoverinfo='text',
+        name=''
+    ))
+    
+    # Add animation frames for gentle movement
     frames = []
-    for i in range(5):  # Create 5 animation frames
-        frame_data = monthly_sales.copy()
-        frame_data['jitter_x'] = frame_data['month'] + f"_{i}"
-        frame_data['jitter_y'] = frame_data['units_sold'] * (1 + uniform(-0.05, 0.05))  # ±5% variation
-        frame_data['frame'] = i
-        frames.append(frame_data)
+    for i in range(10):
+        # Slightly adjust positions
+        new_pos = pos + (np.random.rand(n, 2) - 0.5) * 20
+        
+        # Ensure no overlaps in new positions
+        for _ in range(5):
+            dist_matrix = cdist(new_pos, new_pos)
+            for i in range(n):
+                for j in range(i+1, n):
+                    min_dist = radii[i] + radii[j]
+                    actual_dist = dist_matrix[i,j]
+                    
+                    if actual_dist < min_dist:
+                        dx, dy = new_pos[i] - new_pos[j]
+                        angle = np.arctan2(dy, dx)
+                        move = (min_dist - actual_dist) * 0.3
+                        
+                        new_pos[i] += [move * np.cos(angle), move * np.sin(angle)]
+                        new_pos[j] -= [move * np.cos(angle), move * np.sin(angle)]
+        
+        frames.append(go.Frame(
+            data=[go.Scatter(
+                x=new_pos[:,0],
+                y=new_pos[:,1]
+            )]
+        ))
     
-    animated_data = pd.concat(frames)
+    fig.frames = frames
     
-    # Create the bubble chart with animation
-    fig = px.scatter(
-        animated_data,
-        x="jitter_x",
-        y="jitter_y",
-        size="units_sold",
-        color="product",
-        hover_name="product",
-        animation_frame="frame",
-        range_y=[0, animated_data['units_sold'].max() * 1.2],
-        size_max=60
-    )
-    
-    # Customize animation and layout
+    # Animation controls
     fig.update_layout(
-        title="Monthly Sales by Product (Animated View)",
-        xaxis_title="Month",
-        yaxis_title="Units Sold",
-        showlegend=True,
-        transition={'duration': 1000},
+        title=f"Product Sales (Last Month: {last_month})",
+        xaxis=dict(visible=False, range=[0, 1000]),
+        yaxis=dict(visible=False, range=[0, 500]),
+        hovermode='closest',
         updatemenus=[{
             'type': 'buttons',
             'showactive': False,
             'buttons': [{
-                'label': '▶️ Play Animation',
+                'label': '▶️ Play',
                 'method': 'animate',
-                'args': [None, {'frame': {'duration': 500, 'redraw': True}}]
+                'args': [None, {
+                    'frame': {'duration': 300, 'redraw': True},
+                    'fromcurrent': True,
+                    'mode': 'immediate'
+                }]
             }]
-        }]
-    )
-    
-    # Improve visual styling
-    fig.update_traces(
-        marker=dict(
-            line=dict(width=0.5, color='DarkSlateGrey'),
-            opacity=0.8
-        ),
-        selector=dict(mode='markers')
-    )
-    
-    # Simplify x-axis labels
-    fig.update_xaxes(
-        tickvals=[x + "_0" for x in monthly_sales['month'].unique()],
-        ticktext=monthly_sales['month'].unique()
+        }],
+        height=500
     )
     
     return fig
@@ -236,14 +300,14 @@ uploaded_file = st.file_uploader("📤 Upload Sales CSV", type=["csv"])
 if uploaded_file:
     df = load_data(uploaded_file)
     
-    # --- NEW: Animated Bubble Chart Section ---
-    st.subheader("🌍 Product Sales Overview")
-    with st.expander("View Monthly Sales by Product", expanded=True):
-        bubble_fig = create_animated_bubble_chart(df)
+    # --- Product Bubble Overview ---
+    st.subheader("🌍 Product Sales Visualization")
+    with st.expander("View Product Performance", expanded=True):
+        bubble_fig = create_product_bubbles(df)
         st.plotly_chart(bubble_fig, use_container_width=True)
     
-    # --- Existing Product Selection ---
-    product = st.selectbox("SELECT PRODUCT", df['product'].unique())
+    # --- Product Selection ---
+    product = st.selectbox("SELECT PRODUCT FOR DETAILED ANALYSIS", df['product'].unique())
     product_df = df[df['product'] == product]
     
     # Inventory controls
@@ -328,7 +392,7 @@ else:
         sample_data = pd.DataFrame({
             'date': pd.date_range(end=datetime.today(), periods=90).strftime('%Y-%m-%d'),
             'units_sold': np.random.normal(15, 3, 90).clip(5, 30).astype(int),
-            'product': ["Lavender Essential Oil"]*45 + ["Tea Tree Oil"]*45  # Two products for demo
+            'product': ["Lavender Essential Oil"]*30 + ["Tea Tree Oil"]*30 + ["Eucalyptus Oil"]*30
         }).to_csv(index=False)
         st.download_button(
             label="⬇️ Download Now",
