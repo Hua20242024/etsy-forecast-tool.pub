@@ -17,15 +17,28 @@ import plotly.graph_objects as go
 st.markdown("""
 <style>
     .metric-box {
-        background: #f8f9fa;
+        background: #000000;
         border-radius: 8px;
         padding: 15px;
         margin: 5px 0;
+        color: white !important;
+    }
+    .metric-box h3 {
+        color: #AAAAAA !important;
+        font-size: 14px !important;
+        margin-bottom: 5px !important;
+    }
+    .metric-box h2 {
+        color: white !important;
+        font-size: 24px !important;
+        margin-top: 0 !important;
     }
     .stPlotlyChart {
-        border: 1px solid #f0f2f6;
+        border: none !important;
+        padding: 0 !important;
+    }
+    .stPlotlyChart .js-plotly-plot {
         border-radius: 8px;
-        padding: 10px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -105,12 +118,13 @@ def create_forecast_chart(actual_df, forecast_df):
     )
     
     fig.update_layout(
-        title='Sales Forecast & Inventory Projection',
+        title='Sales',
         xaxis_title='Date',
         yaxis_title='Units Sold',
         hovermode='x unified',
         template='plotly_white',
-        height=500
+        height=500,
+        margin=dict(l=0, r=0, t=40, b=0)
     )
     
     return fig
@@ -123,7 +137,8 @@ def run_forecast(product_df, current_stock, safety_stock, lead_time):
     forecast = model.predict(future)
     
     avg_daily = forecast['yhat'].mean()
-    avg_monthly = avg_daily * 30
+    next_30_days = forecast[forecast['ds'] <= (datetime.now() + timedelta(days=30))]['yhat'].mean()
+    avg_monthly = next_30_days * 30
     weekly_seasonality = (forecast['weekly'].max() - forecast['weekly'].min()) * 100
     
     reorder_point = (avg_daily * lead_time) + safety_stock
@@ -132,6 +147,7 @@ def run_forecast(product_df, current_stock, safety_stock, lead_time):
     return {
         'forecast': forecast,
         'avg_daily': round(avg_daily, 1),
+        'next_30_days': round(next_30_days, 1),
         'avg_monthly': round(avg_monthly),
         'weekly_seasonality': round(weekly_seasonality),
         'reorder_point': round(reorder_point),
@@ -163,7 +179,7 @@ if uploaded_file:
     
     # --- Metrics Dashboard ---
     st.subheader("📊 Key Metrics")
-    m1, m2, m3 = st.columns(3)
+    m1, m2, m3, m4 = st.columns(4)
     m1.markdown(f"""
     <div class="metric-box">
         <h3>Avg Daily Sales</h3>
@@ -173,12 +189,19 @@ if uploaded_file:
     
     m2.markdown(f"""
     <div class="metric-box">
-        <h3>Avg Monthly Sales</h3>
-        <h2>{results['avg_monthly']} units</h2>
+        <h3>Next 30 Days Avg</h3>
+        <h2>{results['next_30_days']} units</h2>
     </div>
     """, unsafe_allow_html=True)
     
     m3.markdown(f"""
+    <div class="metric-box">
+        <h3>Projected Monthly</h3>
+        <h2>{results['avg_monthly']} units</h2>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    m4.markdown(f"""
     <div class="metric-box">
         <h3>Weekly Fluctuation</h3>
         <h2>±{results['weekly_seasonality']}%</h2>
