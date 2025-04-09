@@ -1,4 +1,12 @@
+# MUST BE FIRST COMMAND
 import streamlit as st
+st.set_page_config(
+    page_title="📊 Etsy Inventory Pro", 
+    layout="wide",
+    page_icon="📊"
+)
+
+# Rest of imports AFTER set_page_config
 import pandas as pd
 import numpy as np
 from prophet import Prophet
@@ -22,18 +30,15 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- App Config ---
-st.set_page_config(
-    page_title="📊 Etsy Inventory Pro", 
-    layout="wide",
-    page_icon="📊"
-)
+# --- App Title ---
 st.title("📊 Professional Inventory Dashboard")
 
 # --- Data Processing ---
 def load_data(uploaded_file):
     try:
         df = pd.read_csv(uploaded_file)
+        
+        # Flexible column detection (fixed syntax)
         date_col = next((col for col in df.columns if 'date' in col.lower()), 'date')
         sales_col = next((col for col in df.columns if any(x in col.lower() for x in ['units', 'sales', 'qty'])), 'units_sold')
         product_col = next((col for col in df.columns if 'product' in col.lower()), 'product')
@@ -51,7 +56,6 @@ def load_data(uploaded_file):
 
 # --- Enhanced Plotly Visualization ---
 def create_forecast_chart(actual_df, forecast_df):
-    # Color palette
     colors = {
         'actual': '#4C78A8',
         'forecast': '#E45756',
@@ -61,35 +65,24 @@ def create_forecast_chart(actual_df, forecast_df):
     
     fig = go.Figure()
     
-    # Actual sales (markers + line)
+    # Actual sales
     fig.add_trace(go.Scatter(
         x=actual_df['date'],
         y=actual_df['units_sold'],
         mode='markers+lines',
         name='ACTUAL SALES',
-        marker=dict(
-            color=colors['actual'],
-            size=8,
-            opacity=0.8,
-            line=dict(width=1, color='white')
-        ),
-        line=dict(
-            color=colors['actual'], 
-            width=1.5,
-            dash='dot'),
+        marker=dict(color=colors['actual'], size=8, opacity=0.8, line=dict(width=1, color='white')),
+        line=dict(color=colors['actual'], width=1.5, dash='dot'),
         hovertemplate='<b>%{x|%b %d %Y}</b><br>%{y} units<extra></extra>'
     ))
     
-    # Forecast (smooth line)
+    # Forecast
     fig.add_trace(go.Scatter(
         x=forecast_df['ds'],
         y=forecast_df['yhat'],
         mode='lines',
         name='FORECAST',
-        line=dict(
-            color=colors['forecast'],
-            width=3,
-            shape='spline'),
+        line=dict(color=colors['forecast'], width=3, shape='spline'),
         hovertemplate='<b>%{x|%b %d %Y}</b><br>%{y:.1f} units<extra></extra>'
     ))
     
@@ -107,43 +100,17 @@ def create_forecast_chart(actual_df, forecast_df):
     # Today's line
     fig.add_vline(
         x=datetime.now(),
-        line=dict(
-            color=colors['today'],
-            width=2,
-            dash='dash'),
-        annotation=dict(
-            text=" TODAY",
-            font=dict(size=10, color=colors['today']),
-            bgcolor="white",
-            borderpad=3)
+        line=dict(color=colors['today'], width=2, dash='dash'),
+        annotation=dict(text=" TODAY", font=dict(size=10, color=colors['today']), bgcolor="white")
     )
     
     # Layout
     fig.update_layout(
         title='<b>SALES FORECAST & INVENTORY PROJECTION</b>',
-        title_font=dict(size=18, family="Arial"),
-        xaxis=dict(
-            title='DATE',
-            gridcolor='rgba(200,200,200,0.2)',
-            showline=True,
-            linecolor='lightgray',
-            tickformat="%b %d<br>%Y"),
-        yaxis=dict(
-            title='UNITS SOLD',
-            gridcolor='rgba(200,200,200,0.2)'),
+        xaxis_title='DATE',
+        yaxis_title='UNITS SOLD',
         plot_bgcolor='white',
-        paper_bgcolor='white',
-        hoverlabel=dict(
-            bgcolor='white',
-            font_size=12,
-            bordercolor='lightgray'),
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="center",
-            x=0.5),
-        margin=dict(l=20, r=20, t=80, b=20),
+        hovermode='x unified',
         height=500
     )
     
@@ -151,22 +118,19 @@ def create_forecast_chart(actual_df, forecast_df):
 
 # --- Forecasting Logic ---
 def run_forecast(product_df, current_stock, safety_stock, lead_time):
-    model = Prophet(
-        weekly_seasonality=True,
-        daily_seasonality=False,
-        seasonality_mode='multiplicative'
-    )
+    model = Prophet(weekly_seasonality=True, daily_seasonality=False)
     model.fit(product_df.rename(columns={'date':'ds', 'units_sold':'y'}))
     future = model.make_future_dataframe(periods=180)
     forecast = model.predict(future)
     
     avg_daily = forecast['yhat'].mean()
+    reorder_point = (avg_daily * lead_time) + safety_stock
+    days_remaining = max(0, (current_stock - reorder_point) / avg_daily) if avg_daily > 0 else 0
     
     return {
         'forecast': forecast,
         'avg_daily': round(avg_daily, 1),
-        'avg_monthly': round(avg_daily * 30),
-        'reorder_point': round((avg_daily * lead_time) + safety_stock),
+        'reorder_point': round(reorder_point),
         'order_qty': max(round(avg_daily * lead_time * 1.5), 10),
         'stockout_date': (datetime.now() + timedelta(days=current_stock/avg_daily)).strftime('%b %d')
     }
@@ -176,66 +140,32 @@ uploaded_file = st.file_uploader("📤 Upload Sales CSV", type=["csv"])
 
 if uploaded_file:
     df = load_data(uploaded_file)
-    
-    # Product selection
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        product = st.selectbox("SELECT PRODUCT", df['product'].unique())
-    with col2:
-        st.metric("Total Products", len(df['product'].unique()))
-    
+    product = st.selectbox("SELECT PRODUCT", df['product'].unique())
     product_df = df[df['product'] == product]
     
     # Inventory controls
     with st.expander("⚙️ INVENTORY SETTINGS", expanded=True):
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            current_stock = st.number_input("CURRENT STOCK (UNITS)", min_value=0, value=50)
-        with c2:
-            safety_stock = st.number_input("SAFETY STOCK (UNITS)", min_value=0, value=10)
-        with c3:
-            lead_time = st.number_input("LEAD TIME (DAYS)", min_value=1, value=7)
+        current_stock = st.number_input("CURRENT STOCK (UNITS)", min_value=0, value=50)
+        safety_stock = st.number_input("SAFETY STOCK (UNITS)", min_value=0, value=10)
+        lead_time = st.number_input("LEAD TIME (DAYS)", min_value=1, value=7)
     
     # Run forecast
     results = run_forecast(product_df, current_stock, safety_stock, lead_time)
     
-    # Dashboard
-    st.plotly_chart(
-        create_forecast_chart(product_df, results['forecast']), 
-        use_container_width=True
-    )
+    # Display
+    st.plotly_chart(create_forecast_chart(product_df, results['forecast']), use_container_width=True)
     
     # Metrics
-    m1, m2, m3 = st.columns(3)
-    m1.metric("Avg Daily Sales", f"{results['avg_daily']} units")
-    m2.metric("Projected Monthly", f"{results['avg_monthly']} units")
-    m3.metric("Reorder Point", f"{results['reorder_point']} units")
+    cols = st.columns(3)
+    cols[0].metric("Avg Daily", f"{results['avg_daily']} units")
+    cols[1].metric("Reorder Point", f"{results['reorder_point']} units")
+    cols[2].metric("Order Qty", f"{results['order_qty']} units")
     
     # Alerts
     if current_stock <= results['reorder_point']:
-        st.error(f"""
-        🚨 **URGENT REORDER NEEDED**  
-        - Suggested Quantity: **{results['order_qty']} units**  
-        - Projected Stockout: **{results['stockout_date']}**
-        """)
+        st.error(f"🚨 Stockout in ~{results['stockout_date']} | Order {results['order_qty']} units now")
     else:
-        st.success(f"""
-        ✅ **INVENTORY HEALTHY**  
-        - Current Stock Lasts: **{(current_stock - results['reorder_point']) / results['avg_daily']:.0f} days**  
-        - Suggested Order Date: **{(datetime.now() + timedelta(days=(current_stock - results['reorder_point']) / results['avg_daily'])).strftime('%b %d')}**
-        """)
+        st.success(f"✅ Stock healthy until ~{results['stockout_date']}")
 
 else:
     st.info("ℹ️ Please upload a CSV with columns: date, units_sold, product")
-    if st.button("📥 Download Sample CSV"):
-        sample_data = pd.DataFrame({
-            'date': pd.date_range(end=datetime.today(), periods=30).strftime('%Y-%m-%d'),
-            'units_sold': np.random.randint(5, 20, 30),
-            'product': "Lavender Essential Oil"
-        }).to_csv(index=False)
-        st.download_button(
-            label="⬇️ Download Now",
-            data=sample_data,
-            file_name="sample_sales_data.csv",
-            mime="text/csv"
-        )
