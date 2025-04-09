@@ -12,8 +12,6 @@ import numpy as np
 from prophet import Prophet
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
-import plotly.express as px
-from random import uniform
 import math
 
 # --- Streamlit Style Setup ---
@@ -43,6 +41,10 @@ st.markdown("""
     .stPlotlyChart {
         border: none !important;
         padding: 0 !important;
+        background: transparent !important;
+    }
+    .floating-bubbles {
+        background-color: transparent !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -69,73 +71,9 @@ def load_data(uploaded_file):
         st.error(f"❌ Data Error: {str(e)}")
         st.stop()
 
-# --- Enhanced Plotly Visualization ---
-def create_forecast_chart(actual_df, forecast_df):
-    fig = go.Figure()
-    
-    # Convert datetime to timestamp for vline
-    today_timestamp = datetime.now().timestamp() * 1000
-    
-    # Actual sales
-    fig.add_trace(go.Scatter(
-        x=actual_df['date'],
-        y=actual_df['units_sold'],
-        mode='markers+lines',
-        name='Actual Sales',
-        line=dict(color='#636EFA', dash='dot', width=1),
-        marker=dict(size=5)
-    ))
-    
-    # Forecast
-    fig.add_trace(go.Scatter(
-        x=forecast_df['ds'],
-        y=forecast_df['yhat'],
-        mode='lines',
-        name='Forecast',
-        line=dict(color='#FF7F0E', width=2)
-    ))
-    
-    # Confidence interval
-    fig.add_trace(go.Scatter(
-        x=forecast_df['ds'],
-        y=forecast_df['yhat_upper'],
-        mode='lines',
-        line=dict(width=0),
-        showlegend=False
-    ))
-    fig.add_trace(go.Scatter(
-        x=forecast_df['ds'],
-        y=forecast_df['yhat_lower'],
-        fill='tonexty',
-        fillcolor='rgba(255, 127, 14, 0.2)',
-        line=dict(width=0),
-        name='Confidence Range'
-    ))
-    
-    # Today's line
-    fig.add_vline(
-        x=today_timestamp,
-        line_dash="dash",
-        line_color="gray",
-        annotation_text="Today",
-        annotation_position="top right"
-    )
-    
-    fig.update_layout(
-        title='Sales Forecast',
-        xaxis_title='Date',
-        yaxis_title='Units Sold',
-        hovermode='x unified',
-        template='plotly_white',
-        height=500,
-        margin=dict(l=0, r=0, t=40, b=0)
-    )
-    
-    return fig
-
-# --- Simplified Auto-Animated Bubble Chart ---
-def create_product_bubbles(df):
-    # Get last month's sales for each product
+# --- Floating Bubbles Visualization ---
+def create_floating_bubbles(df):
+    # Get last month's sales
     last_month = (datetime.now().replace(day=1) - timedelta(days=1)).strftime('%Y-%m')
     monthly_sales = df[df['date'].dt.strftime('%Y-%m') == last_month]
     
@@ -143,73 +81,92 @@ def create_product_bubbles(df):
         st.warning(f"No sales data for {last_month}")
         return None
     
-    # Aggregate sales
     product_sales = monthly_sales.groupby('product')['units_sold'].sum().reset_index()
-    
-    # Create base positions (equally spaced)
     n = len(product_sales)
-    base_positions = np.linspace(0, 100, n)
     
-    # Generate frames with gentle movement
-    frames = []
-    for i in range(10):  # Number of animation frames
-        frame = product_sales.copy()
-        frame['x_pos'] = base_positions + np.random.uniform(-5, 5, n)  # Small horizontal movement
-        frame['y_pos'] = frame['units_sold'] * (1 + np.random.uniform(-0.03, 0.03, n))  # Slight vertical variation
-        frame['size'] = frame['units_sold'] * (1 + np.random.uniform(-0.05, 0.05, n))  # Gentle pulsing
-        frames.append(frame)
+    # Create initial positions in a circle
+    radius = 40
+    center_x, center_y = 50, 50
+    angles = np.linspace(0, 2*np.pi, n, endpoint=False)
+    x_pos = center_x + radius * np.cos(angles)
+    y_pos = center_y + radius * np.sin(angles)
     
-    # Create figure with all frames
+    # Create figure
     fig = go.Figure()
     
-    # Add traces for each product
-    for i, product in enumerate(product_sales['product']):
+    # Add bubbles with colored borders
+    colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8']
+    for i in range(n):
         fig.add_trace(go.Scatter(
-            x=[f['x_pos'].iloc[i] for f in frames],
-            y=[f['y_pos'].iloc[i] for f in frames],
+            x=[x_pos[i]],
+            y=[y_pos[i]],
             mode='markers+text',
             marker=dict(
-                size=[f['size'].iloc[i] for f in frames],
-                sizemode='diameter',
-                color=px.colors.qualitative.Plotly[i % len(px.colors.qualitative.Plotly)],
-                opacity=0.8,
-                line=dict(width=1, color='DarkSlateGrey')
+                size=product_sales['units_sold'].iloc[i]/product_sales['units_sold'].max()*50 + 30,
+                color='rgba(0,0,0,0)',  # Transparent center
+                line=dict(width=3, color=colors[i % len(colors)]),
+                opacity=0.8
             ),
-            text=product,
+            text=product_sales['product'].iloc[i],
             textposition='middle center',
-            name=product,
             hoverinfo='text',
-            hovertext=f"{product}<br>Units Sold: {product_sales['units_sold'].iloc[i]}"
+            hovertext=f"{product_sales['product'].iloc[i]}<br>{last_month} Sales: {product_sales['units_sold'].iloc[i]} units",
+            name=''
         ))
     
-    # Animation settings
+    # Animation settings - bubbles will float gently
+    frames = []
+    for t in range(0, 360, 5):
+        # Slightly vary the radius and angle for organic movement
+        varied_radius = radius * (0.95 + 0.1 * np.sin(math.radians(t)))
+        frame_x = center_x + varied_radius * np.cos(angles + math.radians(t/3))
+        frame_y = center_y + varied_radius * np.sin(angles + math.radians(t/4))
+        
+        frames.append(go.Frame(
+            data=[go.Scatter(
+                x=[frame_x[i]],
+                y=[frame_y[i]],
+                marker=dict(
+                    size=product_sales['units_sold'].iloc[i]/product_sales['units_sold'].max()*50 + 30 * 
+                        (0.9 + 0.2 * math.sin(math.radians(t + i*30)))  # Gentle pulsing
+                )
+            ) for i in range(n)],
+            name=f"frame_{t}"
+        ))
+    
+    fig.frames = frames
+    
+    # Layout without axes
     fig.update_layout(
-        title=f"Last Month's Sales ({last_month})",
-        xaxis=dict(visible=False, range=[-10, 110]),
-        yaxis=dict(range=[0, product_sales['units_sold'].max() * 1.3]),
+        title=f"Product Sales - {last_month}",
         showlegend=False,
-        updatemenus=[dict(
-            type='buttons',
-            showactive=False,
-            buttons=[dict(
-                label='Play',
-                method='animate',
-                args=[None, dict(frame=dict(duration=300, redraw=True), 
-                                fromcurrent=True, 
-                                mode='immediate')]
-            )]
-        )]
+        xaxis=dict(visible=False, range=[0, 100]),
+        yaxis=dict(visible=False, range=[0, 100]),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        height=500,
+        margin=dict(l=0, r=0, t=60, b=0),
+        updatemenus=[{
+            "type": "buttons",
+            "showactive": False,
+            "buttons": [{
+                "args": [None, {"frame": {"duration": 50, "redraw": True},
+                              "fromcurrent": True,
+                              "transition": {"duration": 0}}],
+                "label": "",
+                "method": "animate"
+            }]
+        }]
     )
     
-    # Create animation frames
-    fig.frames = [go.Frame(
-        data=[go.Scatter(
-            x=[frame['x_pos'].iloc[i] for i in range(n)],
-            y=[frame['y_pos'].iloc[i] for i in range(n)],
-            marker=dict(size=[frame['size'].iloc[i] for i in range(n)])
-        )],
-        name=str(k)
-    ) for k, frame in enumerate(frames)]
+    # Auto-start animation
+    fig.update_layout(updatemenus=[dict(type="buttons", showactive=False, buttons=[])])
+    fig['layout']['updatemenus'][0]['buttons'].append(
+        dict(method='animate',
+             args=[None, dict(frame=dict(duration=50, redraw=True), 
+                            fromcurrent=True, 
+                            mode='immediate')],
+             label=''))
     
     return fig
 
@@ -251,11 +208,12 @@ uploaded_file = st.file_uploader("📤 Upload Sales CSV", type=["csv"])
 if uploaded_file:
     df = load_data(uploaded_file)
     
-    # --- Product Bubble Overview ---
-    st.subheader("🌍 Product Sales Overview")
-    bubble_fig = create_product_bubbles(df)
-    if bubble_fig:
-        st.plotly_chart(bubble_fig, use_container_width=True)
+    # --- Floating Bubbles Section ---
+    st.subheader("🌍 Product Sales Visualization")
+    with st.container():
+        bubble_fig = create_floating_bubbles(df)
+        if bubble_fig:
+            st.plotly_chart(bubble_fig, use_container_width=True, config={'displayModeBar': False})
     
     # --- Product Selection ---
     product = st.selectbox("SELECT PRODUCT FOR DETAILED ANALYSIS", df['product'].unique())
