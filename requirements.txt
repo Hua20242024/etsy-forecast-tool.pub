@@ -1,0 +1,6 @@
+
+Copy
+streamlit
+pandas
+prophet
+plotly
