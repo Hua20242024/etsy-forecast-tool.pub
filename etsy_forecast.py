@@ -12,6 +12,8 @@ import numpy as np
 from prophet import Prophet
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
+import plotly.express as px
+from random import uniform
 
 # --- Streamlit Style Setup ---
 st.markdown("""
@@ -130,6 +132,72 @@ def create_forecast_chart(actual_df, forecast_df):
     
     return fig
 
+# --- NEW: Animated Bubble Chart ---
+def create_animated_bubble_chart(df):
+    # Process data for monthly sales by product
+    monthly_sales = df.copy()
+    monthly_sales['month'] = monthly_sales['date'].dt.to_period('M').astype(str)
+    monthly_sales = monthly_sales.groupby(['product', 'month'])['units_sold'].sum().reset_index()
+    
+    # Add jitter for animation effect (small random movements)
+    frames = []
+    for i in range(5):  # Create 5 animation frames
+        frame_data = monthly_sales.copy()
+        frame_data['jitter_x'] = frame_data['month'] + f"_{i}"
+        frame_data['jitter_y'] = frame_data['units_sold'] * (1 + uniform(-0.05, 0.05))  # ±5% variation
+        frame_data['frame'] = i
+        frames.append(frame_data)
+    
+    animated_data = pd.concat(frames)
+    
+    # Create the bubble chart with animation
+    fig = px.scatter(
+        animated_data,
+        x="jitter_x",
+        y="jitter_y",
+        size="units_sold",
+        color="product",
+        hover_name="product",
+        animation_frame="frame",
+        range_y=[0, animated_data['units_sold'].max() * 1.2],
+        size_max=60
+    )
+    
+    # Customize animation and layout
+    fig.update_layout(
+        title="Monthly Sales by Product (Animated View)",
+        xaxis_title="Month",
+        yaxis_title="Units Sold",
+        showlegend=True,
+        transition={'duration': 1000},
+        updatemenus=[{
+            'type': 'buttons',
+            'showactive': False,
+            'buttons': [{
+                'label': '▶️ Play Animation',
+                'method': 'animate',
+                'args': [None, {'frame': {'duration': 500, 'redraw': True}}]
+            }]
+        }]
+    )
+    
+    # Improve visual styling
+    fig.update_traces(
+        marker=dict(
+            line=dict(width=0.5, color='DarkSlateGrey'),
+            opacity=0.8
+        ),
+        selector=dict(mode='markers')
+    )
+    
+    # Simplify x-axis labels
+    fig.update_xaxes(
+        tickvals=[x + "_0" for x in monthly_sales['month'].unique()],
+        ticktext=monthly_sales['month'].unique()
+    )
+    
+    return fig
+
 # --- Forecasting Logic ---
 def run_forecast(product_df, current_stock, safety_stock, lead_time):
     model = Prophet(weekly_seasonality=True, daily_seasonality=False)
@@ -167,6 +235,14 @@ uploaded_file = st.file_uploader("📤 Upload Sales CSV", type=["csv"])
 
 if uploaded_file:
     df = load_data(uploaded_file)
+    
+    # --- NEW: Animated Bubble Chart Section ---
+    st.subheader("🌍 Product Sales Overview")
+    with st.expander("View Monthly Sales by Product", expanded=True):
+        bubble_fig = create_animated_bubble_chart(df)
+        st.plotly_chart(bubble_fig, use_container_width=True)
+    
+    # --- Existing Product Selection ---
     product = st.selectbox("SELECT PRODUCT", df['product'].unique())
     product_df = df[df['product'] == product]
     
@@ -174,7 +250,7 @@ if uploaded_file:
     with st.expander("⚙️ INVENTORY SETTINGS", expanded=True):
         col1, col2, col3 = st.columns(3)
         with col1:
-            current_stock = st.number_input("CURRENT STOCK (UNITS)", min_value=0, value=500)  # Updated default to 500
+            current_stock = st.number_input("CURRENT STOCK (UNITS)", min_value=0, value=500)
         with col2:
             safety_stock = st.number_input("SAFETY STOCK (UNITS)", min_value=0, value=20)
         with col3:
@@ -252,7 +328,7 @@ else:
         sample_data = pd.DataFrame({
             'date': pd.date_range(end=datetime.today(), periods=90).strftime('%Y-%m-%d'),
             'units_sold': np.random.normal(15, 3, 90).clip(5, 30).astype(int),
-            'product': "Lavender Essential Oil"
+            'product': ["Lavender Essential Oil"]*45 + ["Tea Tree Oil"]*45  # Two products for demo
         }).to_csv(index=False)
         st.download_button(
             label="⬇️ Download Now",
