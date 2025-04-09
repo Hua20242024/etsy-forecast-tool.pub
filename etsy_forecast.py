@@ -33,12 +33,13 @@ st.markdown("""
         font-size: 24px !important;
         margin-top: 0 !important;
     }
+    .metric-box .variation {
+        font-size: 12px !important;
+        color: #CCCCCC !important;
+    }
     .stPlotlyChart {
         border: none !important;
         padding: 0 !important;
-    }
-    .stPlotlyChart .js-plotly-plot {
-        border-radius: 8px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -118,7 +119,7 @@ def create_forecast_chart(actual_df, forecast_df):
     )
     
     fig.update_layout(
-        title='Sales',
+        title='Sales Forecast',
         xaxis_title='Date',
         yaxis_title='Units Sold',
         hovermode='x unified',
@@ -136,24 +137,29 @@ def run_forecast(product_df, current_stock, safety_stock, lead_time):
     future = model.make_future_dataframe(periods=180)
     forecast = model.predict(future)
     
-    avg_daily = forecast['yhat'].mean()
-    next_30_days = forecast[forecast['ds'] <= (datetime.now() + timedelta(days=30))]['yhat'].mean()
-    avg_monthly = next_30_days * 30
-    weekly_seasonality = (forecast['weekly'].max() - forecast['weekly'].min()) * 100
+    # Historical stats
+    hist_avg = product_df['units_sold'].mean()
+    hist_std = product_df['units_sold'].std()
     
-    reorder_point = (avg_daily * lead_time) + safety_stock
-    days_remaining = max(0, (current_stock - reorder_point) / avg_daily) if avg_daily > 0 else 0
+    # Forecast stats
+    forecast_avg = forecast['yhat'].mean()
+    forecast_std = forecast['yhat'].std()
+    next_30_days = forecast[forecast['ds'] <= (datetime.now() + timedelta(days=30))]['yhat'].mean()
+    
+    reorder_point = (forecast_avg * lead_time) + safety_stock
+    days_remaining = max(0, (current_stock - reorder_point) / forecast_avg) if forecast_avg > 0 else 0
     
     return {
         'forecast': forecast,
-        'avg_daily': round(avg_daily, 1),
+        'hist_avg': round(hist_avg, 1),
+        'hist_std': round(hist_std, 1),
+        'forecast_avg': round(forecast_avg, 1),
+        'forecast_std': round(forecast_std, 1),
         'next_30_days': round(next_30_days, 1),
-        'avg_monthly': round(avg_monthly),
-        'weekly_seasonality': round(weekly_seasonality),
         'reorder_point': round(reorder_point),
         'days_remaining': days_remaining,
-        'order_qty': max(round(avg_daily * lead_time * 1.5), 10),
-        'stockout_date': (datetime.now() + timedelta(days=current_stock/avg_daily)).strftime('%b %d')
+        'order_qty': max(round(forecast_avg * lead_time * 1.5), 10),
+        'stockout_date': (datetime.now() + timedelta(days=current_stock/forecast_avg)).strftime('%b %d')
     }
 
 # --- Main App ---
@@ -168,9 +174,9 @@ if uploaded_file:
     with st.expander("⚙️ INVENTORY SETTINGS", expanded=True):
         col1, col2, col3 = st.columns(3)
         with col1:
-            current_stock = st.number_input("CURRENT STOCK (UNITS)", min_value=0, value=50)
+            current_stock = st.number_input("CURRENT STOCK (UNITS)", min_value=0, value=500)  # Updated default to 500
         with col2:
-            safety_stock = st.number_input("SAFETY STOCK (UNITS)", min_value=0, value=10)
+            safety_stock = st.number_input("SAFETY STOCK (UNITS)", min_value=0, value=20)
         with col3:
             lead_time = st.number_input("LEAD TIME (DAYS)", min_value=1, value=7)
     
@@ -178,33 +184,42 @@ if uploaded_file:
     results = run_forecast(product_df, current_stock, safety_stock, lead_time)
     
     # --- Metrics Dashboard ---
-    st.subheader("📊 Key Metrics")
+    st.subheader("📊 Sales Performance Metrics")
     m1, m2, m3, m4 = st.columns(4)
+    
+    # Historical Daily
     m1.markdown(f"""
     <div class="metric-box">
-        <h3>Avg Daily Sales</h3>
-        <h2>{results['avg_daily']} units</h2>
+        <h3>Historical Daily Average</h3>
+        <h2>{results['hist_avg']} units</h2>
+        <div class="variation">± {results['hist_std']} units variation</div>
     </div>
     """, unsafe_allow_html=True)
     
+    # Historical Monthly
     m2.markdown(f"""
     <div class="metric-box">
-        <h3>Next 30 Days Avg</h3>
-        <h2>{results['next_30_days']} units</h2>
+        <h3>Historical Monthly Average</h3>
+        <h2>{round(results['hist_avg'] * 30)} units</h2>
+        <div class="variation">± {round(results['hist_std'] * 30)} units variation</div>
     </div>
     """, unsafe_allow_html=True)
     
+    # Projected Daily
     m3.markdown(f"""
     <div class="metric-box">
-        <h3>Projected Monthly</h3>
-        <h2>{results['avg_monthly']} units</h2>
+        <h3>Projected Daily Average</h3>
+        <h2>{results['forecast_avg']} units</h2>
+        <div class="variation">± {results['forecast_std']} units expected</div>
     </div>
     """, unsafe_allow_html=True)
     
+    # Projected Monthly
     m4.markdown(f"""
     <div class="metric-box">
-        <h3>Weekly Fluctuation</h3>
-        <h2>±{results['weekly_seasonality']}%</h2>
+        <h3>Projected Monthly Average</h3>
+        <h2>{round(results['forecast_avg'] * 30)} units</h2>
+        <div class="variation">± {round(results['forecast_std'] * 30)} units expected</div>
     </div>
     """, unsafe_allow_html=True)
     
@@ -235,8 +250,8 @@ else:
     st.info("ℹ️ Please upload a CSV file with columns: date, units_sold, product")
     if st.button("📥 Download Sample CSV"):
         sample_data = pd.DataFrame({
-            'date': pd.date_range(end=datetime.today(), periods=30).strftime('%Y-%m-%d'),
-            'units_sold': np.random.randint(5, 20, 30),
+            'date': pd.date_range(end=datetime.today(), periods=90).strftime('%Y-%m-%d'),
+            'units_sold': np.random.normal(15, 3, 90).clip(5, 30).astype(int),
             'product': "Lavender Essential Oil"
         }).to_csv(index=False)
         st.download_button(
