@@ -1,5 +1,3 @@
-
-Copy
 streamlit
 pandas
 prophet
