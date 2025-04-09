@@ -4,119 +4,129 @@ import numpy as np
 from prophet import Prophet
 import matplotlib.pyplot as plt
 from matplotlib import dates as mdates
+from datetime import datetime, timedelta
 
 # --- App Setup ---
-st.set_page_config(page_title="📊 Sales Visualizer", layout="wide")
-st.title("📊 Actual vs Forecasted Sales")
+st.set_page_config(page_title="🛍️ Etsy Restock Pro", layout="centered")
+st.title("🛍️ Etsy Restock Manager")
 
-# --- Smart Data Processing ---
-def process_data(df):
-    """Flexibly handles column names and converts dates"""
-    # Auto-detect date column (case insensitive)
-    date_col = next((col for col in df.columns if 'date' in col.lower()), None)
-    
-    if date_col is None:
-        st.error("❌ No date column found. Please include a column named 'date'")
-        st.stop()
-    
+# --- Data Processing ---
+def load_data(uploaded_file):
     try:
-        df[date_col] = pd.to_datetime(df[date_col])
-        df = df.sort_values(date_col)
-        return df.rename(columns={date_col: 'date'})  # Standardize to 'date'
+        df = pd.read_csv(uploaded_file)
+        # Flexible column naming
+        date_col = next((col for col in df.columns if 'date' in col.lower()), 'date')
+        sales_col = next((col for col in df.columns if 'units' in col.lower() or 'sales' in col.lower()), 'units_sold')
+        product_col = next((col for col in df.columns if 'product' in col.lower()), 'product')
+        
+        df = df.rename(columns={
+            date_col: 'date',
+            sales_col: 'units_sold',
+            product_col: 'product'
+        })
+        
+        df['date'] = pd.to_datetime(df['date'])
+        return df.sort_values('date')
+    
     except Exception as e:
-        st.error(f"❌ Date conversion failed: {str(e)}")
+        st.error(f"❌ Data loading failed: {str(e)}")
         st.stop()
 
-# --- Sample Data Generator ---
-def generate_sample_data():
-    dates = pd.date_range(start="2024-01-01", periods=10)
-    products = ["Blue T-Shirt", "White T-Shirt"]
-    return pd.DataFrame([{
-        "date": date.strftime("%Y-%m-%d"),
-        "units_sold": 10 + (i % 3) + (hash(product) % 5),
-        "product": product
-    } for product in products for i, date in enumerate(dates)])
+# --- Plotting Function ---
+def create_compact_plot(actual, forecast, product):
+    fig, ax = plt.subplots(figsize=(8, 3))  # Smaller figure size
+    
+    # Plot actual data
+    ax.plot(actual['ds'], actual['y'], 'b-', linewidth=1.5, marker='o', markersize=4, label='Actual')
+    
+    # Plot forecast
+    ax.plot(forecast['ds'], forecast['yhat'], 'r--', linewidth=1.5, label='Forecast')
+    ax.fill_between(forecast['ds'], forecast['yhat_lower'], forecast['yhat_upper'], color='red', alpha=0.1)
+    
+    # Formatting
+    ax.set_title(f"{product} Sales", fontsize=10)
+    ax.xaxis.set_major_locator(mdates.DayLocator(interval=5))  # Show every 5th day
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %d'))
+    ax.tick_params(axis='x', rotation=45, labelsize=8)
+    ax.tick_params(axis='y', labelsize=8)
+    ax.legend(fontsize=8)
+    ax.grid(True, linestyle=':', alpha=0.3)
+    
+    plt.tight_layout()  # Prevent label overlap
+    return fig
+
+# --- Reorder Logic ---
+def calculate_reorder(forecast, current_stock, lead_time=7, safety_factor=1.2):
+    avg_daily = forecast['yhat'].mean()
+    reorder_point = avg_daily * lead_time * safety_factor
+    days_remaining = current_stock / avg_daily if avg_daily > 0 else 0
+    
+    return {
+        'reorder_point': round(reorder_point),
+        'reorder_qty': round(avg_daily * lead_time * 1.5),  # 1.5x lead time demand
+        'days_remaining': round(days_remaining),
+        'stockout_date': (datetime.now() + timedelta(days=days_remaining)).strftime('%b %d')
+    }
 
 # --- Main App ---
 uploaded_file = st.file_uploader("Upload sales CSV", type=["csv"])
+df = load_data(uploaded_file) if uploaded_file else None
 
-try:
-    if uploaded_file:
-        df = pd.read_csv(uploaded_file)
-        st.success(f"✅ Loaded {len(df)} rows")
-        df = process_data(df)
-    else:
-        df = process_data(generate_sample_data())
-        st.info("ℹ️ Using sample data. Columns: date, units_sold, product")
+if df is not None:
+    # Inventory Settings
+    with st.sidebar:
+        st.header("⚙️ Inventory Settings")
+        lead_time = st.slider("Lead Time (days)", 1, 30, 7)
+        safety_stock = st.slider("Safety Factor", 1.0, 2.0, 1.2, step=0.1)
         
-except Exception as e:
-    st.error(f"❌ Data loading failed: {str(e)}")
-    st.stop()
-
-# --- Plotting Function ---
-def plot_actual_vs_forecast(actual, forecast, product_name):
-    fig, ax = plt.subplots(figsize=(10, 4))
-    
-    # Actual data (blue solid line)
-    ax.plot(actual['ds'], actual['y'], 
-            'b-', linewidth=2, label='Actual Sales', marker='o')
-    
-    # Forecast (white dashed line)
-    ax.plot(forecast['ds'], forecast['yhat'], 
-            'w--', linewidth=2, label='Forecast')
-    
-    # Formatting
-    ax.xaxis.set_major_locator(mdates.DayLocator(interval=2))
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %d'))
-    ax.set_title(f"{product_name} Sales")
-    ax.legend()
-    ax.grid(True, linestyle=':', alpha=0.3)
-    
-    # Dark theme styling
-    fig.patch.set_facecolor('#0E1117')
-    ax.set_facecolor('#0E1117')
-    ax.tick_params(colors='white')
-    ax.xaxis.label.set_color('white')
-    ax.yaxis.label.set_color('white')
-    ax.title.set_color('white')
-    
-    return fig
-
-# --- Forecasting ---
-if 'product' not in df.columns:
-    st.error("❌ Missing 'product' column")
-else:
+    # Product Selection
     products = df['product'].unique()
-    selected_products = st.multiselect("Select products", products, default=products[:1])
+    selected_product = st.selectbox("Select Product", products)
     
-    for product in selected_products:
-        st.subheader(product)
-        product_df = df[df['product'] == product]
+    if selected_product:
+        product_df = df[df['product'] == selected_product]
         
-        try:
-            # Prepare Prophet data
-            train_df = product_df.rename(columns={'date':'ds', 'units_sold':'y'})[['ds','y']]
+        # Forecasting
+        model = Prophet(weekly_seasonality=True, daily_seasonality=False)
+        model.fit(product_df.rename(columns={'date':'ds', 'units_sold':'y'}))
+        future = model.make_future_dataframe(periods=30)
+        forecast = model.predict(future)
+        
+        # Current Stock Input
+        current_stock = st.number_input(
+            f"Current {selected_product} Inventory", 
+            min_value=0,
+            value=int(product_df['units_sold'].mean() * 10)  # Default stock
+        )
+        
+        # Display Plot
+        st.pyplot(create_compact_plot(
+            product_df.rename(columns={'date':'ds', 'units_sold':'y'}),
+            forecast,
+            selected_product
+        ))
+        
+        # Reorder Alert
+        reorder = calculate_reorder(forecast, current_stock, lead_time, safety_stock)
+        
+        if current_stock <= reorder['reorder_point']:
+            st.error(f"""
+            **🚨 REORDER NOW**  
+            - **Suggested Qty:** {reorder['reorder_qty']} units  
+            - **Projected Stockout:** {reorder['stockout_date']}  
+            - **Lead Time:** {lead_time} days  
+            """)
+        else:
+            st.success(f"""
+            **✅ Inventory OK**  
+            - **Reorder Point:** {reorder['reorder_point']} units  
+            - **Current Stock:** {current_stock} units  
+            - **Days Remaining:** {reorder['days_remaining']}  
+            - **Next Check:** {(datetime.now() + timedelta(days=3)).strftime('%b %d')}  
+            """)
             
-            # Model and forecast
-            model = Prophet(weekly_seasonality=True)
-            model.fit(train_df)
-            future = model.make_future_dataframe(periods=30)
-            forecast = model.predict(future)
-            
-            # Plot
-            st.pyplot(plot_actual_vs_forecast(train_df, forecast, product))
-            
-            # Show raw data
-            with st.expander("📋 View raw data"):
-                st.dataframe(product_df)
-                
-        except Exception as e:
-            st.error(f"⚠️ Forecast failed for {product}: {str(e)}")
-
-# --- CSV Template Download ---
-st.download_button(
-    label="📥 Download CSV Template",
-    data=generate_sample_data().to_csv(index=False),
-    file_name="sales_template.csv",
-    mime="text/csv"
-)
+        # Raw Data
+        with st.expander("📊 View Raw Data"):
+            st.dataframe(product_df)
+else:
+    st.info("ℹ️ Please upload a CSV file with columns: date, units_sold, product")
