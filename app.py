@@ -23,10 +23,11 @@ st.markdown(
     }
 
     .subheader {
-        font-size: 12px;
+        font-size: 18px;  /* Increased from 12px */
         text-align: center;
         color: #333333;
-        margin-bottom: 20px;
+        margin-bottom: 30px;
+        font-weight: 500;
     }
 
     .upload-btn {
@@ -47,8 +48,11 @@ st.markdown(
     }
 
     .footer {
+        position: fixed;
+        bottom: 20px;
+        left: 0;
+        right: 0;
         text-align: center;
-        margin-top: 50px;
     }
 
     .footer a {
@@ -57,10 +61,14 @@ st.markdown(
         font-size: 16px;
     }
     
-    /* LinkedIn logo sizing */
+    /* LinkedIn logo styling */
     .linkedin-logo {
         width: 32px;
         height: 32px;
+        transition: transform 0.2s;
+    }
+    .linkedin-logo:hover {
+        transform: scale(1.1);
     }
     </style>
     """, unsafe_allow_html=True
@@ -82,7 +90,7 @@ if uploaded_file is not None:
         df = pd.read_excel(uploaded_file)
     st.write(df.head())  # Display first 5 rows
 
-# Footer with LinkedIn logo and link
+# Footer with LinkedIn logo (fixed at bottom)
 st.markdown(
     """
     <div class="footer">
