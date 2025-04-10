@@ -149,14 +149,14 @@ def create_forecast_chart(actual_df, forecast_df):
     today_timestamp = datetime.now().timestamp() * 1000
     
     # Actual sales
-    fig.add_trace(go.Scatter(
+       fig.add_trace(go.Scatter(
         x=actual_df['date'],
         y=actual_df['units_sold'],
         mode='markers+lines',
         name='Actual Sales',
         line=dict(color='#6a1b9a', dash='dot', width=1),
         marker=dict(size=5)
-    )
+    ))
     
     # Forecast
     fig.add_trace(go.Scatter(
