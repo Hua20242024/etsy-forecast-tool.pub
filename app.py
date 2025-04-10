@@ -9,31 +9,24 @@ st.set_page_config(
 # --- Custom CSS ---
 st.markdown("""
 <style>
-    /* Giant title */
+    /* Giant title (now clickable) */
     .main-title {
         font-size: 7.5rem;
         text-align: center;
         color: #6F36FF;
         font-weight: 800;
         margin: 1rem 0 0 0;
-    }
-    
-    /* Visible upload button */
-    .upload-btn {
-        background: #6F36FF;
-        color: white !important;
-        border: none;
-        padding: 1rem 2rem;
-        font-size: 1.2rem;
-        border-radius: 8px;
-        margin: 2rem auto;
-        display: block;
         cursor: pointer;
         transition: all 0.2s;
     }
-    .upload-btn:hover {
-        background: #5C2ECC;
-        transform: scale(1.02);
+    .main-title:hover {
+        opacity: 0.9;
+        transform: scale(1.01);
+    }
+    
+    /* Completely hidden uploader */
+    [data-testid="stFileUploader"] {
+        display: none !important;
     }
     
     /* Twitter/X logo at bottom */
@@ -50,6 +43,14 @@ st.markdown("""
         fill: #000000;
         opacity: 0.7;
     }
+    
+    /* Subtle upload hint */
+    .upload-hint {
+        text-align: center;
+        color: #666;
+        margin-top: 2rem;
+        font-size: 0.9rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -60,21 +61,26 @@ twitter_logo = """
 </svg>
 """
 
-# --- App Content ---
-st.markdown('<div class="main-title">Ventory</div>', unsafe_allow_html=True)
-
-# Visible upload button
+# --- Hidden File Uploader ---
 uploaded_file = st.file_uploader(
     "Upload inventory file",
     type=["csv", "xlsx"],
-    label_visibility="collapsed"
+    label_visibility="collapsed",
+    key="hidden_uploader"
 )
 
-# Custom styled button (triggers the hidden uploader)
+# --- App Content ---
 st.markdown(
-    '<div class="upload-btn">Upload Spreadsheet</div>',
+    '<div class="main-title" onclick="document.getElementById(\'hidden_uploader\').click()">Ventory</div>', 
     unsafe_allow_html=True
 )
+
+# Subtle hint (disappears after upload)
+if not uploaded_file:
+    st.markdown(
+        '<div class="upload-hint">click title to upload</div>',
+        unsafe_allow_html=True
+    )
 
 # Twitter logo at bottom
 st.markdown(
