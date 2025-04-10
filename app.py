@@ -90,13 +90,23 @@ if uploaded_file is not None:
         df = pd.read_csv(uploaded_file)
     else:
         df = pd.read_excel(uploaded_file)
-    
+
+    # Display the columns to help identify them
+    st.write("Dataframe columns:", df.columns)
+
+    # Try to find the 'product' column dynamically
+    product_col = next((col for col in df.columns if 'product' in col.lower()), None)
+
+    if product_col is None:
+        st.error("No 'product' column found in the data.")
+        st.stop()
+
     # Show the first few rows of the dataframe
     st.write(df.head())
 
     # Product selection
-    product = st.selectbox("SELECT PRODUCT FOR DETAILED ANALYSIS", df['product'].unique())
-    product_df = df[df['product'] == product]
+    product = st.selectbox("SELECT PRODUCT FOR DETAILED ANALYSIS", df[product_col].unique())
+    product_df = df[df[product_col] == product]
 
     # Inventory settings
     current_stock = st.number_input("CURRENT STOCK (UNITS)", min_value=0, value=500)
