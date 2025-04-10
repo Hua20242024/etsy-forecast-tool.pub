@@ -18,33 +18,15 @@ st.markdown("""
         margin: 1rem 0 0 0;
     }
     
-    /* Completely hide uploader widget text */
-    [data-testid="stFileUploader"] div:first-child {
-        visibility: hidden;
-        height: 0;
-        padding: 0 !important;
-    }
-    
-    /* Custom upload zone */
-    .upload-zone {
-        border: 2px dashed #6F36FF;
-        border-radius: 15px;
-        padding: 5rem;
-        margin: 2rem auto;
-        width: 70%;
-        background: #FAFAFA;
-        text-align: center;
-        position: relative;
-    }
-    
-    /* Our visible prompt text */
-    .upload-prompt {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        color: #888;
-        pointer-events: none;
+    /* Completely invisible but clickable uploader */
+    [data-testid="stFileUploader"] {
+        opacity: 0;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
     }
     
     /* Small BlueSky logo */
@@ -69,19 +51,12 @@ bluesky_logo = """
 # --- App Content ---
 st.markdown('<div class="main-title">Ventory</div>', unsafe_allow_html=True)
 
-# File uploader (will be hidden but clickable)
+# Invisible full-page uploader
 uploaded_file = st.file_uploader(
     "Upload your inventory file",
     type=["csv", "xlsx"],
     label_visibility="collapsed"
 )
-
-# Visible upload zone
-st.markdown("""
-<div class="upload-zone">
-    <div class="upload-prompt">Click anywhere to upload file</div>
-</div>
-""", unsafe_allow_html=True)
 
 # BlueSky logo
 st.markdown(
