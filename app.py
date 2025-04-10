@@ -9,27 +9,43 @@ st.set_page_config(
 # --- Custom CSS ---
 st.markdown("""
 <style>
-    /* Giant title (now clickable) */
+    /* Main container */
+    .stApp {
+        background-color: #000000;
+        color: white;
+    }
+    
+    /* Giant title */
     .main-title {
         font-size: 7.5rem;
         text-align: center;
         color: #6F36FF;
         font-weight: 800;
         margin: 1rem 0 0 0;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-    .main-title:hover {
-        opacity: 0.9;
-        transform: scale(1.01);
     }
     
-    /* Completely hidden uploader */
+    /* Subtitle */
+    .subtitle {
+        text-align: center;
+        color: white;
+        font-size: 1rem;
+        margin-bottom: 3rem;
+        opacity: 0.8;
+    }
+    
+    /* Upload button styling */
     [data-testid="stFileUploader"] {
-        display: none !important;
+        width: 200px;
+        margin: 0 auto;
+    }
+    [data-testid="stFileUploader"] div:first-child {
+        background: #6F36FF;
+        color: white;
+        border-radius: 8px;
+        padding: 10px 20px;
     }
     
-    /* Twitter/X logo at bottom */
+    /* White Twitter logo */
     .twitter-logo {
         position: fixed;
         bottom: 20px;
@@ -40,16 +56,8 @@ st.markdown("""
     .twitter-logo svg {
         width: 24px;
         height: 24px;
-        fill: #000000;
+        fill: white;
         opacity: 0.7;
-    }
-    
-    /* Subtle upload hint */
-    .upload-hint {
-        text-align: center;
-        color: #666;
-        margin-top: 2rem;
-        font-size: 0.9rem;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -61,26 +69,16 @@ twitter_logo = """
 </svg>
 """
 
-# --- Hidden File Uploader ---
-uploaded_file = st.file_uploader(
-    "Upload inventory file",
-    type=["csv", "xlsx"],
-    label_visibility="collapsed",
-    key="hidden_uploader"
-)
-
 # --- App Content ---
-st.markdown(
-    '<div class="main-title" onclick="document.getElementById(\'hidden_uploader\').click()">Ventory</div>', 
-    unsafe_allow_html=True
-)
+st.markdown('<div class="main-title">Ventory</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">Your sales and inventory manager</div>', unsafe_allow_html=True)
 
-# Subtle hint (disappears after upload)
-if not uploaded_file:
-    st.markdown(
-        '<div class="upload-hint">click title to upload</div>',
-        unsafe_allow_html=True
-    )
+# Standard file uploader
+uploaded_file = st.file_uploader(
+    "Upload spreadsheet",
+    type=["csv", "xlsx"],
+    label_visibility="visible"
+)
 
 # Twitter logo at bottom
 st.markdown(
