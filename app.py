@@ -1,92 +1,77 @@
-# MUST BE FIRST COMMAND
 import streamlit as st
-st.set_page_config(
-    page_title="Ventory",
-    layout="centered",
-    page_icon="📊"
-)
 
-# --- Custom CSS ---
-st.markdown("""
-<style>
-    /* Main container */
-    .stApp {
-        background-color: #000000;
-        color: white;
-    }
-    
-    /* Giant title */
-    .main-title {
-        font-size: 7.5rem;
-        text-align: center;
-        color: #6F36FF;
-        font-weight: 800;
-        margin: 1rem 0 0 0;
-    }
-    
-    /* Subtitle */
-    .subtitle {
-        text-align: center;
-        color: white;
-        font-size: 1rem;
-        margin-bottom: 3rem;
-        opacity: 0.8;
-    }
-    
-    /* Upload button styling */
-    [data-testid="stFileUploader"] {
-        width: 200px;
-        margin: 0 auto;
-    }
-    [data-testid="stFileUploader"] div:first-child {
-        background: #6F36FF;
-        color: white;
-        border-radius: 8px;
-        padding: 10px 20px;
-    }
-    
-    /* White Twitter logo */
-    .twitter-logo {
-        position: fixed;
-        bottom: 20px;
-        left: 0;
-        right: 0;
-        text-align: center;
-    }
-    .twitter-logo svg {
-        width: 24px;
-        height: 24px;
-        fill: white;
-        opacity: 0.7;
-    }
-</style>
-""", unsafe_allow_html=True)
+# Set page title
+st.set_page_config(page_title="Ventory", page_icon="🔍", layout="centered")
 
-# --- Twitter/X Logo ---
-twitter_logo = """
-<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-</svg>
-"""
-
-# --- App Content ---
-st.markdown('<div class="main-title">Ventory</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">Your sales and inventory manager</div>', unsafe_allow_html=True)
-
-# Standard file uploader
-uploaded_file = st.file_uploader(
-    "Upload spreadsheet",
-    type=["csv", "xlsx"],
-    label_visibility="visible"
-)
-
-# Twitter logo at bottom
+# Custom CSS to style the page
 st.markdown(
-    f'<div class="twitter-logo"><a href="https://twitter.com" target="_blank">{twitter_logo}</a></div>',
-    unsafe_allow_html=True
+    """
+    <style>
+    .header {
+        font-size: 64px;
+        font-weight: bold;
+        text-align: center;
+        margin-top: 50px;
+    }
+    .subheader {
+        font-size: 24px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .upload-btn {
+        display: block;
+        margin: 0 auto;
+        background-color: #ffffff;
+        color: #000000;
+        font-size: 16px;
+        padding: 10px 20px;
+        border: 2px solid #0078d4;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+    .upload-btn:hover {
+        background-color: #0078d4;
+        color: #ffffff;
+    }
+    .footer {
+        text-align: center;
+        margin-top: 50px;
+    }
+    .footer a {
+        text-decoration: none;
+        color: #0078d4;
+        font-size: 16px;
+    }
+    </style>
+    """, unsafe_allow_html=True
 )
 
-# --- File Processing ---
-if uploaded_file:
-    st.success("File uploaded successfully!")
-    # [Your existing analysis code here]
+# Main page content
+st.markdown('<div class="header">Ventory</div>', unsafe_allow_html=True)
+st.markdown('<div class="subheader">Your sales and inventory partner</div>', unsafe_allow_html=True)
+
+# File upload widget
+uploaded_file = st.file_uploader("Upload CSV or Excel File", type=["csv", "xlsx"], key="file_uploader")
+
+if uploaded_file is not None:
+    st.write("File successfully uploaded!")
+    # You can process the file here (e.g., read and display it)
+    if uploaded_file.type == "text/csv":
+        import pandas as pd
+        df = pd.read_csv(uploaded_file)
+        st.write(df.head())  # Display first 5 rows
+    elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+        import pandas as pd
+        df = pd.read_excel(uploaded_file)
+        st.write(df.head())  # Display first 5 rows
+
+# Footer with bluesky logo and link
+st.markdown(
+    """
+    <div class="footer">
+        <a href="https://your-bluesky-link.com" target="_blank">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/4/4d/Bluesky_logo.svg" width="100" alt="Bluesky Logo"/>
+        </a>
+    </div>
+    """, unsafe_allow_html=True
+)
