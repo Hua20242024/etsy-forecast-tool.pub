@@ -1,77 +1,98 @@
 import streamlit as st
-from PIL import Image
-import io
 
-# Set page config
-st.set_page_config(
-    page_title="Ventory",
-    layout="centered",
-    page_icon="📊"
-)
+# Set page title
+st.set_page_config(page_title="Ventory", page_icon="🔍", layout="centered")
 
-# Custom CSS to hide all uploader text
-st.markdown("""
-<style>
-    /* Hide all uploader text */
-    [data-testid="stFileUploader"] div:first-child div:first-child div:first-child {
-        visibility: hidden;
-        height: 0;
-        padding: 0 !important;
+# Custom CSS to style the page
+st.markdown(
+    """
+    <style>
+    body {
+        background-color: #f0f0f0;  /* Set a light gray background color */
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
     }
-    
-    /* Style the upload button */
-    [data-testid="stFileUploader"] div:first-child {
-        background: #6F36FF;
-        color: white;
-        border-radius: 8px;
-        padding: 10px 24px;
-        width: fit-content;
+
+    .overlay {
+        background: rgba(255, 255, 255, 0.8);  /* Opaque white overlay */
+        height: 100vh;
+        padding-top: 100px;
+    }
+
+    .header {
+        font-size: 64px;
+        font-weight: bold;
+        color: #6a1b9a;  /* Purple color */
+        text-align: center;
+        margin-top: 50px;
+    }
+    .subheader {
+        font-size: 12px;
+        text-align: center;
+        color: #333333;
+        margin-bottom: 20px;
+    }
+    .upload-btn {
+        display: block;
         margin: 0 auto;
+        background-color: #ffffff;
+        color: #000000;
+        font-size: 16px;
+        padding: 10px 20px;
+        border: 2px solid #0078d4;
+        border-radius: 5px;
+        cursor: pointer;
     }
-    
-    /* Main title */
-    .main-title {
-        font-size: 5rem;
+    .upload-btn:hover {
+        background-color: #0078d4;
+        color: #ffffff;
+    }
+    .footer {
         text-align: center;
-        color: #6F36FF;
-        font-weight: 800;
-        margin: 1rem 0 0.5rem 0;
+        margin-top: 50px;
     }
-    
-    /* Twitter logo */
-    .twitter-logo {
-        text-align: center;
-        margin-top: 3rem;
+    .footer a {
+        text-decoration: none;
+        color: #0078d4;
+        font-size: 16px;
     }
-</style>
-""", unsafe_allow_html=True)
-
-# Create Twitter/X logo
-def create_twitter_logo():
-    img = Image.new('RGB', (100, 100), (255, 255, 255))
-    d = ImageDraw.Draw(img)
-    # Draw Twitter X logo
-    d.line((20, 20, 80, 80), fill=(29, 161, 242), width=8)
-    d.line((80, 20, 20, 80), fill=(29, 161, 242), width=8)
-    return img
-
-# App content
-st.markdown('<div class="main-title">Ventory</div>', unsafe_allow_html=True)
-
-# File uploader with hidden text
-uploaded_file = st.file_uploader(
-    " ",  # Empty string for label
-    type=["csv", "xlsx"],
-    label_visibility="collapsed"
+    </style>
+    """, unsafe_allow_html=True
 )
 
-# Display Twitter logo
-logo = create_twitter_logo()
-st.image(logo, width=40, output_format='PNG', use_column_width=False, 
-         caption='', clamp=False, channels='RGB', 
-         output_format='auto')
+# Add an overlay to ensure text stands out on the background
+st.markdown('<div class="overlay">', unsafe_allow_html=True)
 
-# File processing
-if uploaded_file:
-    st.success("File uploaded!")
-    # Your analysis code here
+# Main page content
+st.markdown('<div class="header">Ventory</div>', unsafe_allow_html=True)
+st.markdown('<div class="subheader">Your sales and inventory partner</div>', unsafe_allow_html=True)
+
+# File upload widget (without the "Upload CSV or Excel" label)
+uploaded_file = st.file_uploader("", type=["csv", "xlsx"], key="file_uploader")
+
+if uploaded_file is not None:
+    st.write("File successfully uploaded!")
+    # You can process the file here (e.g., read and display it)
+    if uploaded_file.type == "text/csv":
+        import pandas as pd
+        df = pd.read_csv(uploaded_file)
+        st.write(df.head())  # Display first 5 rows
+    elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+        import pandas as pd
+        df = pd.read_excel(uploaded_file)
+        st.write(df.head())  # Display first 5 rows
+
+# Footer with bluesky logo and link
+st.markdown(
+    """
+    <div class="footer">
+        <a href="https://blueskyweb.xyz/" target="_blank">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Bluesky_logo.svg/800px-Bluesky_logo.svg.png" width="100" alt="Bluesky Logo"/>
+        </a>
+    </div>
+    """, unsafe_allow_html=True
+)
+
+# End the overlay div
+st.markdown('</div>', unsafe_allow_html=True)
