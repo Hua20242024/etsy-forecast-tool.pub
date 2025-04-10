@@ -1,85 +1,77 @@
 import streamlit as st
+from PIL import Image
+import io
 
 # Set page config
 st.set_page_config(
     page_title="Ventory",
-    page_icon="📊",
-    layout="centered"
+    layout="centered",
+    page_icon="📊"
 )
 
-# Custom CSS
+# Custom CSS to hide all uploader text
 st.markdown("""
 <style>
-    /* Main content */
-    .header {
-        font-size: 5rem;
-        font-weight: 800;
-        color: #6F36FF;
-        text-align: center;
-        margin: 1rem 0 0 0;
+    /* Hide all uploader text */
+    [data-testid="stFileUploader"] div:first-child div:first-child div:first-child {
+        visibility: hidden;
+        height: 0;
+        padding: 0 !important;
     }
     
-    .subheader {
-        font-size: 1rem;
-        text-align: center;
-        color: #666666;
-        margin-bottom: 3rem;
-    }
-    
-    /* Upload button */
-    [data-testid="stFileUploader"] {
-        width: 200px;
-        margin: 0 auto;
-    }
-    
+    /* Style the upload button */
     [data-testid="stFileUploader"] div:first-child {
         background: #6F36FF;
         color: white;
         border-radius: 8px;
-        padding: 10px 20px;
-        font-weight: 500;
+        padding: 10px 24px;
+        width: fit-content;
+        margin: 0 auto;
     }
     
-    /* Twitter/X logo */
+    /* Main title */
+    .main-title {
+        font-size: 5rem;
+        text-align: center;
+        color: #6F36FF;
+        font-weight: 800;
+        margin: 1rem 0 0.5rem 0;
+    }
+    
+    /* Twitter logo */
     .twitter-logo {
         text-align: center;
         margin-top: 3rem;
     }
-    
-    .twitter-logo svg {
-        width: 24px;
-        height: 24px;
-        fill: #000000;
-        opacity: 0.7;
-    }
 </style>
 """, unsafe_allow_html=True)
 
-# Twitter/X Logo SVG
-twitter_logo = """
-<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-</svg>
-"""
+# Create Twitter/X logo
+def create_twitter_logo():
+    img = Image.new('RGB', (100, 100), (255, 255, 255))
+    d = ImageDraw.Draw(img)
+    # Draw Twitter X logo
+    d.line((20, 20, 80, 80), fill=(29, 161, 242), width=8)
+    d.line((80, 20, 20, 80), fill=(29, 161, 242), width=8)
+    return img
 
-# App Content
-st.markdown('<div class="header">Ventory</div>', unsafe_allow_html=True)
-st.markdown('<div class="subheader">Your sales and inventory manager</div>', unsafe_allow_html=True)
+# App content
+st.markdown('<div class="main-title">Ventory</div>', unsafe_allow_html=True)
 
-# File uploader
+# File uploader with hidden text
 uploaded_file = st.file_uploader(
-    "Upload spreadsheet",
+    " ",  # Empty string for label
     type=["csv", "xlsx"],
-    label_visibility="visible"
+    label_visibility="collapsed"
 )
 
-# Twitter logo footer
-st.markdown(
-    f'<div class="twitter-logo"><a href="https://twitter.com" target="_blank">{twitter_logo}</a></div>',
-    unsafe_allow_html=True
-)
+# Display Twitter logo
+logo = create_twitter_logo()
+st.image(logo, width=40, output_format='PNG', use_column_width=False, 
+         caption='', clamp=False, channels='RGB', 
+         output_format='auto')
 
 # File processing
 if uploaded_file:
-    st.success("File uploaded successfully!")
-    # Add your analysis code here
+    st.success("File uploaded!")
+    # Your analysis code here
