@@ -18,27 +18,37 @@ st.markdown("""
         margin: 1rem 0 0 0;
     }
     
-    /* Full-page invisible uploader */
-    [data-testid="stFileUploader"] {
-        opacity: 0;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
+    /* Visible upload button */
+    .upload-btn {
+        background: #6F36FF;
+        color: white !important;
+        border: none;
+        padding: 1rem 2rem;
+        font-size: 1.2rem;
+        border-radius: 8px;
+        margin: 2rem auto;
+        display: block;
         cursor: pointer;
-        z-index: 9999;
+        transition: all 0.2s;
+    }
+    .upload-btn:hover {
+        background: #5C2ECC;
+        transform: scale(1.02);
     }
     
-    /* Twitter/X logo styling */
+    /* Twitter/X logo at bottom */
     .twitter-logo {
+        position: fixed;
+        bottom: 20px;
+        left: 0;
+        right: 0;
         text-align: center;
-        margin-top: 3rem;
     }
     .twitter-logo svg {
-        width: 28px;
-        height: 28px;
+        width: 24px;
+        height: 24px;
         fill: #000000;
+        opacity: 0.7;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -53,11 +63,17 @@ twitter_logo = """
 # --- App Content ---
 st.markdown('<div class="main-title">Ventory</div>', unsafe_allow_html=True)
 
-# Invisible full-page uploader (MUST come before logo)
+# Visible upload button
 uploaded_file = st.file_uploader(
-    "Upload your inventory file",
+    "Upload inventory file",
     type=["csv", "xlsx"],
     label_visibility="collapsed"
+)
+
+# Custom styled button (triggers the hidden uploader)
+st.markdown(
+    '<div class="upload-btn">Upload Spreadsheet</div>',
+    unsafe_allow_html=True
 )
 
 # Twitter logo at bottom
@@ -70,11 +86,3 @@ st.markdown(
 if uploaded_file:
     st.success("File uploaded successfully!")
     # [Your existing analysis code here]
-    # Example:
-    # df = pd.read_csv(uploaded_file)
-    # st.dataframe(df.head())
-else:
-    st.markdown(
-        '<div style="text-align: center; color: #666; margin-top: 1rem;">Click anywhere to upload file</div>',
-        unsafe_allow_html=True
-    )
