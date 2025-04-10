@@ -30,23 +30,23 @@ st.markdown("""
         z-index: 9999;
     }
     
-    /* Butterfly logo styling */
-    .bluesky-logo {
+    /* Twitter/X logo styling */
+    .twitter-logo {
         text-align: center;
         margin-top: 3rem;
     }
-    .bluesky-butterfly {
-        width: 32px;
-        height: 32px;
+    .twitter-logo svg {
+        width: 28px;
+        height: 28px;
+        fill: #000000;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# --- BlueSky Butterfly Logo ---
-butterfly_logo = """
-<svg class="bluesky-butterfly" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-  <path fill="#0085FF" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15v-4H7v-2h3V7h2v4h3v2h-3v4h-2z"/>
-  <path fill="#0085FF" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/>
+# --- Twitter/X Logo ---
+twitter_logo = """
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
 </svg>
 """
 
@@ -60,12 +60,21 @@ uploaded_file = st.file_uploader(
     label_visibility="collapsed"
 )
 
-# BlueSky butterfly logo at bottom
+# Twitter logo at bottom
 st.markdown(
-    f'<div class="bluesky-logo"><a href="https://bsky.app" target="_blank">{butterfly_logo}</a></div>',
+    f'<div class="twitter-logo"><a href="https://twitter.com" target="_blank">{twitter_logo}</a></div>',
     unsafe_allow_html=True
 )
 
-# [Your analysis code here]
+# --- File Processing ---
 if uploaded_file:
     st.success("File uploaded successfully!")
+    # [Your existing analysis code here]
+    # Example:
+    # df = pd.read_csv(uploaded_file)
+    # st.dataframe(df.head())
+else:
+    st.markdown(
+        '<div style="text-align: center; color: #666; margin-top: 1rem;">Click anywhere to upload file</div>',
+        unsafe_allow_html=True
+    )
