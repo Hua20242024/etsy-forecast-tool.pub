@@ -98,9 +98,15 @@ if uploaded_file is not None:
     # Show the first few rows
     st.write(df.head())
 
+    # Input fields for inventory settings
+    st.sidebar.header("⚙️ Inventory Settings")
+    current_stock = st.sidebar.number_input("Current Stock (Units)", min_value=0, value=500)
+    safety_stock = st.sidebar.number_input("Safety Stock (Units)", min_value=0, value=20)
+    lead_time = st.sidebar.number_input("Lead Time (Days)", min_value=1, value=7)
+    
     # Now, run the forecast using the logic from etsy_forecast.py
     try:
-        forecast_results = ef.run_forecast(df)  # Assuming your run_forecast function is in etsy_forecast.py
+        forecast_results = ef.run_forecast(df, current_stock, safety_stock, lead_time)  # Passing all required arguments
         st.success("Forecasting complete!")
         
         # Display results (you can adjust this based on what data you want to show)
