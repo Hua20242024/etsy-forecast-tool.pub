@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit as st
 
 # Set page title
 st.set_page_config(page_title="Ventory", page_icon="🔍", layout="centered")
@@ -8,20 +9,9 @@ st.markdown(
     """
     <style>
     body {
-        background-color: #f0f0f0;  /* Set a light gray background color */
         margin: 0;
         padding: 0;
         font-family: Arial, sans-serif;
-    }
-
-    .overlay {
-        background: rgba(255, 255, 255, 0.8);  /* Opaque white overlay */
-        height: 100vh;
-        padding-top: 100px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
     }
 
     .header {
@@ -29,6 +19,7 @@ st.markdown(
         font-weight: bold;
         color: #6a1b9a;  /* Purple color */
         text-align: center;
+        margin-top: 50px;  /* Adds some space at the top */
     }
 
     .subheader {
@@ -69,9 +60,6 @@ st.markdown(
     """, unsafe_allow_html=True
 )
 
-# Add an overlay to ensure text stands out on the background
-st.markdown('<div class="overlay">', unsafe_allow_html=True)
-
 # Main page content
 st.markdown('<div class="header">Ventory</div>', unsafe_allow_html=True)
 st.markdown('<div class="subheader">Your sales and inventory partner</div>', unsafe_allow_html=True)
@@ -91,16 +79,13 @@ if uploaded_file is not None:
         df = pd.read_excel(uploaded_file)
         st.write(df.head())  # Display first 5 rows
 
-# Footer with LinkedIn logo and link
+# Footer with Twitter logo and link
 st.markdown(
     """
     <div class="footer">
-        <a href="https://www.linkedin.com" target="_blank">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/7/7a/LinkedIn_logo_2023.svg" width="100" alt="LinkedIn Logo"/>
+        <a href="https://twitter.com" target="_blank">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/6/60/Twitter_Logo_2021.svg" width="100" alt="Twitter Logo"/>
         </a>
     </div>
     """, unsafe_allow_html=True
 )
-
-# End the overlay div
-st.markdown('</div>', unsafe_allow_html=True)
