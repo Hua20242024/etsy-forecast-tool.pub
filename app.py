@@ -1,98 +1,85 @@
 import streamlit as st
 
-# Set page title
-st.set_page_config(page_title="Ventory", page_icon="🔍", layout="centered")
+# Set page config
+st.set_page_config(
+    page_title="Ventory",
+    page_icon="📊",
+    layout="centered"
+)
 
-# Custom CSS to style the page
-st.markdown(
-    """
-    <style>
-    body {
-        background-image: url('https://your-image-url.com/background.jpg');  /* Replace with your background image URL */
-        background-size: cover;
-        background-repeat: no-repeat;
-        background-attachment: fixed;
-    }
-
-    .overlay {
-        background: rgba(255, 255, 255, 0.8);  /* Opaque white overlay */
-        height: 100vh;
-        padding-top: 100px;
-    }
-
+# Custom CSS
+st.markdown("""
+<style>
+    /* Main content */
     .header {
-        font-size: 64px;
-        font-weight: bold;
-        color: #6a1b9a;  /* Purple color */
+        font-size: 5rem;
+        font-weight: 800;
+        color: #6F36FF;
         text-align: center;
-        margin-top: 50px;
+        margin: 1rem 0 0 0;
     }
+    
     .subheader {
-        font-size: 12px;
+        font-size: 1rem;
         text-align: center;
-        color: #333333;
-        margin-bottom: 20px;
+        color: #666666;
+        margin-bottom: 3rem;
     }
-    .upload-btn {
-        display: block;
+    
+    /* Upload button */
+    [data-testid="stFileUploader"] {
+        width: 200px;
         margin: 0 auto;
-        background-color: #ffffff;
-        color: #000000;
-        font-size: 16px;
+    }
+    
+    [data-testid="stFileUploader"] div:first-child {
+        background: #6F36FF;
+        color: white;
+        border-radius: 8px;
         padding: 10px 20px;
-        border: 2px solid #0078d4;
-        border-radius: 5px;
-        cursor: pointer;
+        font-weight: 500;
     }
-    .upload-btn:hover {
-        background-color: #0078d4;
-        color: #ffffff;
-    }
-    .footer {
+    
+    /* Twitter/X logo */
+    .twitter-logo {
         text-align: center;
-        margin-top: 50px;
+        margin-top: 3rem;
     }
-    .footer a {
-        text-decoration: none;
-        color: #0078d4;
-        font-size: 16px;
+    
+    .twitter-logo svg {
+        width: 24px;
+        height: 24px;
+        fill: #000000;
+        opacity: 0.7;
     }
-    </style>
-    """, unsafe_allow_html=True
-)
+</style>
+""", unsafe_allow_html=True)
 
-# Add an overlay to ensure text stands out on the background
-st.markdown('<div class="overlay">', unsafe_allow_html=True)
+# Twitter/X Logo SVG
+twitter_logo = """
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+</svg>
+"""
 
-# Main page content
+# App Content
 st.markdown('<div class="header">Ventory</div>', unsafe_allow_html=True)
-st.markdown('<div class="subheader">Your sales and inventory partner</div>', unsafe_allow_html=True)
+st.markdown('<div class="subheader">Your sales and inventory manager</div>', unsafe_allow_html=True)
 
-# File upload widget (without the "Upload CSV or Excel" label)
-uploaded_file = st.file_uploader("", type=["csv", "xlsx"], key="file_uploader")
-
-if uploaded_file is not None:
-    st.write("File successfully uploaded!")
-    # You can process the file here (e.g., read and display it)
-    if uploaded_file.type == "text/csv":
-        import pandas as pd
-        df = pd.read_csv(uploaded_file)
-        st.write(df.head())  # Display first 5 rows
-    elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
-        import pandas as pd
-        df = pd.read_excel(uploaded_file)
-        st.write(df.head())  # Display first 5 rows
-
-# Footer with bluesky logo and link
-st.markdown(
-    """
-    <div class="footer">
-        <a href="https://blueskyweb.xyz/" target="_blank">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Bluesky_logo.svg/800px-Bluesky_logo.svg.png" width="100" alt="Bluesky Logo"/>
-        </a>
-    </div>
-    """, unsafe_allow_html=True
+# File uploader
+uploaded_file = st.file_uploader(
+    "Upload spreadsheet",
+    type=["csv", "xlsx"],
+    label_visibility="visible"
 )
 
-# End the overlay div
-st.markdown('</div>', unsafe_allow_html=True)
+# Twitter logo footer
+st.markdown(
+    f'<div class="twitter-logo"><a href="https://twitter.com" target="_blank">{twitter_logo}</a></div>',
+    unsafe_allow_html=True
+)
+
+# File processing
+if uploaded_file:
+    st.success("File uploaded successfully!")
+    # Add your analysis code here
