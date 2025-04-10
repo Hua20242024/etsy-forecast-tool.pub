@@ -10,12 +10,14 @@ st.markdown(
     .header {
         font-size: 64px;
         font-weight: bold;
+        color: #6a1b9a;  /* Purple color */
         text-align: center;
         margin-top: 50px;
     }
     .subheader {
-        font-size: 24px;
+        font-size: 12px;
         text-align: center;
+        color: #333333;
         margin-bottom: 20px;
     }
     .upload-btn {
@@ -50,8 +52,8 @@ st.markdown(
 st.markdown('<div class="header">Ventory</div>', unsafe_allow_html=True)
 st.markdown('<div class="subheader">Your sales and inventory partner</div>', unsafe_allow_html=True)
 
-# File upload widget
-uploaded_file = st.file_uploader("Upload CSV or Excel File", type=["csv", "xlsx"], key="file_uploader")
+# File upload widget (without the "Upload CSV or Excel" label)
+uploaded_file = st.file_uploader("", type=["csv", "xlsx"], key="file_uploader")
 
 if uploaded_file is not None:
     st.write("File successfully uploaded!")
