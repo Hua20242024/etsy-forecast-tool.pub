@@ -7,6 +7,19 @@ st.set_page_config(page_title="Ventory", page_icon="🔍", layout="centered")
 st.markdown(
     """
     <style>
+    body {
+        background-image: url('https://your-image-url.com/background.jpg');  /* Replace with your background image URL */
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+    }
+
+    .overlay {
+        background: rgba(255, 255, 255, 0.8);  /* Opaque white overlay */
+        height: 100vh;
+        padding-top: 100px;
+    }
+
     .header {
         font-size: 64px;
         font-weight: bold;
@@ -48,6 +61,9 @@ st.markdown(
     """, unsafe_allow_html=True
 )
 
+# Add an overlay to ensure text stands out on the background
+st.markdown('<div class="overlay">', unsafe_allow_html=True)
+
 # Main page content
 st.markdown('<div class="header">Ventory</div>', unsafe_allow_html=True)
 st.markdown('<div class="subheader">Your sales and inventory partner</div>', unsafe_allow_html=True)
@@ -71,9 +87,12 @@ if uploaded_file is not None:
 st.markdown(
     """
     <div class="footer">
-        <a href="https://your-bluesky-link.com" target="_blank">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/4/4d/Bluesky_logo.svg" width="100" alt="Bluesky Logo"/>
+        <a href="https://blueskyweb.xyz/" target="_blank">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Bluesky_logo.svg/800px-Bluesky_logo.svg.png" width="100" alt="Bluesky Logo"/>
         </a>
     </div>
     """, unsafe_allow_html=True
 )
+
+# End the overlay div
+st.markdown('</div>', unsafe_allow_html=True)
