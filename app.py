@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import etsy_forecast as ef  # Import the forecast processing logic
 
 # Set page title
 st.set_page_config(page_title="Ventory", page_icon="🔍", layout="centered")
@@ -88,7 +89,19 @@ if uploaded_file is not None:
         df = pd.read_csv(uploaded_file)
     else:
         df = pd.read_excel(uploaded_file)
-    st.write(df.head())  # Display first 5 rows
+    
+    # Display first 5 rows
+    st.write("### Uploaded Data", df.head())
+
+    # Process the data and generate forecast
+    forecast_results = ef.process_sales_data(df)  # Assuming this function processes and forecasts data
+    
+    # Display forecast results (example)
+    st.write("### Forecast Results")
+    for product, result in forecast_results.items():
+        st.write(f"#### Product: {product}")
+        st.write(result['forecast'])  # Display the forecast data (can be a table)
+        st.plotly_chart(result['graph'], use_container_width=True)  # Display the forecast graph
 
 # Footer with LinkedIn logo (fixed at bottom)
 st.markdown(
